@@ -1,0 +1,23 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isProjectMember(projectId) {
+      return isAuthenticated() && (
+        firestore.get(/databases/(default)/documents/projects/$(projectId)).data.ownerId == request.auth.uid ||
+        firestore.exists(/databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid))
+      );
+    }
+
+    // Project materials are private to project members
+    match /projects/{projectId}/materials/{fileName} {
+      allow read: if isProjectMember(projectId);
+      allow write: if isProjectMember(projectId)
+                    && request.resource.size < 50 * 1024 * 1024; // 50MB max limit
+    }
+  }
+}
