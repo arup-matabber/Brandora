@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  fullName  String?
+  email     String   @unique
+  role      String   @default("Creative Director")
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Client {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  contact       String?
+  company       String?
+  email         String?
+  phone         String?
+  status        String    @default("Active")
+  notes         String?
+  projectsCount Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  projects      Project[]
+}
+
+model Project {
+  id            String             @id
+  name          String
+  clientId      String?
+  clientName    String
+  type          String             @default("Brand Identity")
+  status        String             @default("In Progress")
+  progress      Int                @default(0)
+  notes         String?
+  visualPreview String?
+  canvasObjects String             @default("[]") // JSON string
+  brandBrain    String?                           // JSON string
+  materials     String             @default("[]") // JSON string
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  client        Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  versions      DirectionVersion[]
+  shares        ReviewShare[]
+  activities    Activity[]
+}
+
+model DirectionVersion {
+  id            String         @id @default(cuid())
+  projectId     String
+  directionId   String
+  versionNumber Int            @default(1)
+  name          String
+  description   String?
+  canvasItems   String         @default("[]") // JSON string
+  publishedAt   DateTime       @default(now())
+  notes         String?
+  author        String         @default("Designer")
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reviews       ClientReview[]
+  comments      Comment[]
+  approvals     Approval[]
+}
+
+model ReviewShare {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  projectId   String
+  directionId String
+  accessLevel String    @default("view_comment")
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ClientReview {
+  id          String            @id @default(cuid())
+  directionId String
+  versionId   String
+  clientToken String
+  status      String            @default("Pending Review")
+  feedback    String?
+  approvedAt  DateTime?
+  createdAt   DateTime          @default(now())
+  version     DirectionVersion? @relation(fields: [versionId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id          String            @id @default(cuid())
+  directionId String
+  versionId   String
+  author      String
+  authorType  String            @default("client")
+  content     String
+  positionX   Float?
+  positionY   Float?
+  resolved    Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  version     DirectionVersion? @relation(fields: [versionId], references: [id], onDelete: Cascade)
+}
+
+model Approval {
+  id          String            @id @default(cuid())
+  directionId String
+  versionId   String
+  clientName  String
+  clientEmail String?
+  status      String            @default("approved")
+  feedback    String?
+  signature   String?
+  createdAt   DateTime          @default(now())
+  version     DirectionVersion? @relation(fields: [versionId], references: [id], onDelete: Cascade)
+}
+
+model LibraryItem {
+  id      String   @id @default(cuid())
+  type    String   // font | color | palette | reference
+  name    String
+  data    String   // JSON string with font details, color codes, palette swatches, etc.
+  source  String?
+  tags    String   @default("[]") // JSON string array
+  savedAt DateTime @default(now())
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  projectId   String?
+  projectName String?
+  type        String
+  title       String
+  description String?
+  user        String   @default("Lucia Ramos")
+  timestamp   DateTime @default(now())
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+}
